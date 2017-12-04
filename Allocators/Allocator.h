@@ -95,8 +95,10 @@ inline void DeallocateArray(Allocator& allocator, T* parray)
 	{
 		parray[i].~T();
 	}
-
-	allocator.deallocate(parray);
+	// don't miss the substract operation,
+	// which will offset the array head pointer the the origianl
+	// pointer the allocator previously returned.
+	allocator.deallocate(parray - ALIGN_ARR_HEADER<T>::reType::ret);
 }// DeallocateArray
 
 }// namespace allocator
