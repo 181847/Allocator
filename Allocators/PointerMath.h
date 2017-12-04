@@ -28,13 +28,12 @@ inline u8 alignForwardAdjustment(void * addr, u8 alignment)
 {
 	u8 adjust = alignment - reinterpret_cast<u8>(addr) & (alignment - 1);
 	// if adjust is the alignment, return 0.
-	if (adjust == alignment)
-		return 0;
-	return adjust;
+	return (adjust != alignment) * adjust;
 }
 
 inline u8 alignForwardAdjustmentWithHeader(void * addr, u8 aligment, u8 headSize)
 {
+
 	u8 addjustment = alignForwardAdjustment(addr, aligment);
 	u8 needSpace = headSize;
 	
@@ -44,12 +43,16 @@ inline u8 alignForwardAdjustmentWithHeader(void * addr, u8 aligment, u8 headSize
 	{
 		// how many left should we need besides the previous addjustment
 		needSpace -= addjustment;
-		addjustment += aligment * (needSpace / aligment);
+		addjustment += aligment * (
+			(needSpace + 
+			// if needSpace mod aligment > 0 mean we need additional one
+			// aligment to to feed the needSpace.
+			(needSpace % aligment != 0)*(aligment)) / aligment);
 		// after the needSpace if still some outof the aligment
-		if (needSpace % aligment != 0)
+		/*if (needSpace % aligment != 0)
 		{
 			addjustment += aligment;
-		}
+		}*/
 	}
 	return addjustment;
 }
