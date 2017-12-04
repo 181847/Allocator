@@ -54,4 +54,14 @@ inline u8 alignForwardAdjustmentWithHeader(void * addr, u8 aligment, u8 headSize
 	return addjustment;
 }
 
+inline void * add(void * addr, size_t offset)
+{
+	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) +offset);
+}
+
+inline void * substract(void * addr, size_t offset)
+{
+	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) - offset);
+}
+
 }// allocator
