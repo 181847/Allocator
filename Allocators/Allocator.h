@@ -1,15 +1,19 @@
 #pragma once
 #include "../../Library/MyTools/UsefulDataType.h"
 #include "../../Library/MyTools/MyAssert.h"
+#include "../../Library/MyTools/MyTools.h"
+#include "PointerMath.h"
 #include "MetaTools.h"
 
 namespace allocator
 {
+
+// this class serve as the interface of all Allocator.
 class Allocator
 {
 public:
 	Allocator(size_t size, void * start);
-
+	DELETE_COPY_CONSTRUCTOR(Allocator)
 	virtual ~Allocator();
 
 	virtual void * allocate(size_t size, u8 alignment) = 0;
