@@ -9,7 +9,7 @@ namespace PointerMath
 
 inline void printAddress(void * address)
 {
-	printf("%08x\n", address);
+	printf("%08p\n", address);
 }
 inline void printAddress(int address)
 {

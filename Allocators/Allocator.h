@@ -2,14 +2,25 @@
 #include "../../Library/MyTools/UsefulDataType.h"
 #include "../../Library/MyTools/MyAssert.h"
 #include "../../Library/MyTools/MyTools.h"
+#include "../../Library/MyTools/DLLTools.h"
 #include "PointerMath.h"
 #include "MetaTools.h"
+
+#ifdef ALLOCATORS_EXPORTS
+#define ALLOCATOR_API DLL_EXPORT_API
+#else
+#ifdef ALLOCATORS_IMPORTS
+#define ALLOCATOR_API DLL_IMPORT_API
+#else
+#define ALLOCATOR_API
+#endif
+#endif
 
 namespace allocator
 {
 
 // this class serve as the interface of all Allocator.
-class Allocator
+class ALLOCATOR_API Allocator
 {
 public:
 	Allocator(size_t size, void * start);
@@ -64,7 +75,7 @@ public:
 		IF__<
 		sizeof(headType) % sizeof(T) == 0,
 		NUMBER_CONTAINER<0>,
-		NUMBER_CONTAINER<sizeof(T)>>::reType
+		NUMBER_CONTAINER<1>>::reType
 	reType;
 	enum {ret = sizeof(headType) / sizeof(T) + reType::ret};
 };// ALIGN_ARR_HEADER
@@ -76,7 +87,7 @@ T* AllocateArray(Allocator& allocator, size_t length)
 
 	// get the array address,
 	// we will jump front head length;
-	T* p = headSize + reinterpret_cast<T*>(allocator.allocate(sizeof(T) * (length + headSize)));
+	T* p = headSize + reinterpret_cast<T*>(allocator.allocate(sizeof(T) * (length + headSize), alignof(T)));
 	// log length
 	*(reinterpret_cast<size_t*>(p) - 1) = length;
 
@@ -104,5 +115,12 @@ inline void DeallocateArray(Allocator& allocator, T* parray)
 	// pointer the allocator previously returned.
 	allocator.deallocate(parray - ALIGN_ARR_HEADER<T>::reType::ret);
 }// DeallocateArray
+
+inline void showAllocator(Allocator & allocator)
+{
+	printf("used_memory:\t%d\n", allocator.getUsedMemory());
+	printf("num_allocations:\t%d\n", allocator.getNumAllocations());
+	printf("size_of_allocator: %d\n", allocator.getSize());
+}
 
 }// namespace allocator

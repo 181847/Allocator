@@ -1,11 +1,10 @@
 #pragma once
 #include "Allocator.h"
-#include "Allocator.h"
 
 namespace allocator
 {
 
-class LinearAllocator :
+class ALLOCATOR_API LinearAllocator :
 	public Allocator
 {
 public:
