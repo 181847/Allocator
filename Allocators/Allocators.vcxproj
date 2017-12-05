@@ -153,6 +153,7 @@
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="MemoryTracer.h" />
     <ClInclude Include="PointerMath.h" />
+    <ClInclude Include="StackAllocator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -173,6 +174,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="LinearAllocator.cpp" />
+    <ClCompile Include="StackAllocator.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
