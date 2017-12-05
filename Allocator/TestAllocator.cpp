@@ -5,6 +5,7 @@
 #include "../../Library//MyTools/UnitTestModules.h"
 #include "../Allocators/PointerMath.h"
 #include "../Allocators/LinearAllocator.h"
+#include "../Allocators/MemoryTracer.h"
 
 #pragma comment(lib, "Allocators.lib")
 
@@ -92,19 +93,20 @@ void TestUnit::AddTestUnit()
 	TEST_UNIT_START("test malloc from gLinearAllocator")
 		DEBUG_MESSAGE("TestStruct size: %d\n", sizeof(TestStruct));
 		DEBUG_MESSAGE("TestStruct align: %d\n", alignof(TestStruct));
-		allocator::ALIGN_ARR_HEADER<TestStruct>::reType::ret;
+
+		debug::debugAllocator::LinearMemoryTracer tracer(gLinearAllocator);
+		
+
 		int error = 0;
 		auto * shouldBeOne = allocator::AllocateNew<int>(gLinearAllocator);
+		tracer.New<int>();
 		*shouldBeOne = 1;
+		error += tracer.report();
 		// after this allocating,
 		// next pointer must align with 0x4.
-
-		int restMemory = gLinearAllocator.getSize() - gLinearAllocator.getUsedMemory();
 		const size_t arrLength = 5;
 		auto * pTestStructArr = allocator::AllocateArray<TestStruct>(gLinearAllocator, arrLength);
-
-		error += 1 != *shouldBeOne;
-		error += 2 != gLinearAllocator.getNumAllocations();
+		tracer.NewArray<TestStruct>(arrLength);
 
 		for (int i = 0; i < arrLength; ++i)
 		{
@@ -112,6 +114,11 @@ void TestUnit::AddTestUnit()
 			error += NOT_EQ(2, pTestStructArr[i]._b);
 			error += NOT_EQ(3, pTestStructArr[i]._c);
 		}
+
+		allocator::AllocateNew<int>(gLinearAllocator);
+
+		error += 1 != *shouldBeOne;
+		error += tracer.report();
 
 		allocator::showAllocator(gLinearAllocator);
 		return error == 0;
