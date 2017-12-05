@@ -88,14 +88,23 @@ inline u8 alignForwardAdjustmentWithHeader(void * addr, u8 aligment, u8 headSize
 	return addjustment;
 }
 
+// offset the address up
 inline void * add(void * addr, size_t offset)
 {
 	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) +offset);
 }
 
+// substruct the address by some offset
 inline void * substract(void * addr, size_t offset)
 {
 	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) - offset);
+}
+
+// get the distanc of two address
+inline size_t substract(void * higherAddr, void * lowerAddr)
+{
+	return reinterpret_cast<size_t>(higherAddr) -
+		reinterpret_cast<size_t>(lowerAddr);
 }
 
 }// allocator
