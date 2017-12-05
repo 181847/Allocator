@@ -14,12 +14,6 @@ public:
 	void * allocate(size_t size, u8 alignment);
 	void deallocate(void * addr);
 
-protected:
-	void * _curr_pos;
-#ifdef _DEBUG
-	void * _prev_pos;
-#endif
-
 	struct AllocationHeader
 	{
 #ifdef _DEBUG
@@ -27,6 +21,13 @@ protected:
 #endif
 		u8 adjustment;
 	};
+
+protected:
+	void * _curr_pos;
+#ifdef _DEBUG
+	void * _prev_pos;
+#endif
+
 };
 
 }// namespace allocator
