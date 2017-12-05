@@ -17,7 +17,7 @@ DECLARE_TEST_UNITS;
 
 static const size_t gLinearSize = 256;
 
-static const size_t gStackAllocatorSize = 256;
+static const size_t gStackAllocatorSize = 512;
 
 // this marco to declare the linear allocator to use, 
 // and will clear the allocator when it's out of current
@@ -26,8 +26,18 @@ static const size_t gStackAllocatorSize = 256;
 	void * buffer = malloc(gLinearSize);\
 	allocator::LinearAllocator linearAllocator(gLinearSize, buffer);\
 	Cleaner clearLinearAlcTrashes([&]() {linearAllocator.clear(); free(buffer);})
-
 #define LinearTarget linearAllocator
+// Linear Allocator help marco end
+
+
+// this marco to declare the linear allocator to use, 
+// and will clear the allocator when it's out of current
+// life range.
+#define DECLARE_STACK_ALLOCATOR	\
+	void * buffer = malloc(gStackAllocatorSize);\
+	allocator::StackAllocator stackAllocator(gStackAllocatorSize, buffer);\
+	Cleaner clearStackAlcTrashes([&]() { free(buffer);})
+// Stack Allocator help marco end
 
 struct TestStruct
 {
@@ -36,8 +46,27 @@ struct TestStruct
 	long _c;
 	TestStruct(int a, short b, long c)
 		:_a(a), _b(b), _c(c) {}
-	TestStruct()
-		:_a(1), _b(2), _c(3) {}
+	TestStruct():TestStruct(1, 2, 3){}
+
+	inline int report()
+	{
+		return NOT_EQ(_a, 1)
+			+ NOT_EQ(_b, 2)
+			+ NOT_EQ(_c, 3);
+	}
+};
+
+class TestClass
+{
+public:
+	TestClass() : str("tesing string~!@#$%^&*()"), number(123456) {}
+	std::string str;
+	int number;
+
+	inline int report()
+	{
+		return NOT_EQ(str, "tesing string~!@#$%^&*()") + NOT_EQ(number, 123456);
+	}
 };
 
 void TestUnit::GetReady()
@@ -202,7 +231,7 @@ void TestUnit::AddTestUnit()
 
 		error += 1 != *shouldBeOne;
 		error += tracer.report();
-
+		
 		// WARNING this code will cause tracer dismatch the LinearTarget,
 		// because we want to test the tracer truly log the state
 		// of the allocator.
@@ -215,6 +244,75 @@ void TestUnit::AddTestUnit()
 		error += tracer.report() == 0;
 
 		//allocator::showAllocator(LinearTarget);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("can StackAllocator usually work?")
+		DECLARE_STACK_ALLOCATOR;
+		int error = 0;
+		debug::debugAllocator::StackMemoryTracer tracer(stackAllocator);
+
+		int * pShouldBe2 = allocator::AllocateNew<int>(stackAllocator);
+		tracer.New<int>();
+		*pShouldBe2 = 2;
+		error += tracer.report();
+
+		const int arrLength = 5;
+		TestStruct * pTStruct = allocator::AllocateArray<TestStruct>(stackAllocator, arrLength);
+		tracer.NewArray<TestStruct>(arrLength);
+
+		for (int i = 0; i < arrLength; ++i)
+		{
+			error += NOT_EQ(1, pTStruct[i]._a);
+			error += NOT_EQ(2, pTStruct[i]._b);
+			error += NOT_EQ(3, pTStruct[i]._c);
+		}
+		error += 2 != *pShouldBe2;
+
+		error += tracer.report();
+
+		// to successfully end the use of stackAllocator, 
+		// we must free the memory,
+		// or the assert will be triggered in the deconstructor
+		// of Allocator, which dosen't allowed to free the allocator
+		// when still some object is on the memory.
+		allocator::DeallocateArray(stackAllocator, pTStruct);
+		allocator::Deallocate(stackAllocator, pShouldBe2);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("for stack allocator loop allocate and free (200000 times)")
+		int error = 0;
+		DECLARE_STACK_ALLOCATOR;
+		const size_t loopTimes = 200000;
+		for (int i = 0; i < loopTimes; ++i)
+		{
+
+			int * pShouldBe2 = allocator::AllocateNew<int>(stackAllocator);
+			*pShouldBe2 = 2;
+
+			const int arrLength = 5;
+			TestStruct * pTStruct = allocator::AllocateArray<TestStruct>(stackAllocator, arrLength);
+			TestClass * pTClass = allocator::AllocateArray<TestClass>(stackAllocator, arrLength);
+
+			for (int i = 0; i < arrLength; ++i)
+			{
+				error += pTStruct[i].report();
+				error += pTClass[i].report();
+			}
+			error += 2 != *pShouldBe2;
+
+			// to successfully end the use of stackAllocator, 
+			// we must free the memory,
+			// or the assert will be triggered in the deconstructor
+			// of Allocator, which dosen't allowed to free the allocator
+			// when still some object is on the memory.
+			allocator::DeallocateArray(stackAllocator, pTClass);
+			allocator::DeallocateArray(stackAllocator, pTStruct);
+			allocator::Deallocate(stackAllocator, pShouldBe2);
+		}
+		error += stackAllocator.getUsedMemory() != 0;
+
 		return error == 0;
 	TEST_UNIT_END;
 }
