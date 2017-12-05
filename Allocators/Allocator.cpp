@@ -10,7 +10,7 @@ Allocator::Allocator(size_t size, void * start)
 
 Allocator::~Allocator()
 {
-	ASSERT(_num_allocations == 0 && _used_memeroy == 0);
+	ASSERT(_num_allocations == 0 && _used_memory == 0);
 	_size = 0;
 	_start = nullptr;
 }
