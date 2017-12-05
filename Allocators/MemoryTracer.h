@@ -15,6 +15,7 @@ class MemoryTracer
 public:
 	MemoryTracer(allocator::Allocator& alctr)
 		:usedMemory(0), basePointer(reinterpret_cast<u32>(alctr.getStart()))
+		, startPointer(reinterpret_cast<u32>(alctr.getStart()))
 		, targetAllocator(alctr), numAllocations(0)
 	{
 		ASSERT(alctr.getUsedMemory() == 0 && "MemoryTracer ERROR, the allocator shouldn't be used before trace");
@@ -37,20 +38,23 @@ public:
 	inline int report()
 	{
 		return 
-				usedMemory != targetAllocator.getUsedMemory()
-			+	numAllocations != targetAllocator.getNumAllocations();
+				(usedMemory != targetAllocator.getUsedMemory())
+			+	(numAllocations != targetAllocator.getNumAllocations());
 	}
 
 	inline void tick()
 	{
 		++numAllocations;
+		basePointer = startPointer + usedMemory;
 	}
 
 public:
-	u32 basePointer;
-	size_t usedMemory;
-	allocator::Allocator& targetAllocator;
-	size_t numAllocations;
+	const allocator::Allocator& targetAllocator;
+
+	const u32		startPointer;
+	u32				basePointer;
+	size_t			usedMemory;
+	size_t			numAllocations;
 };// memory tracer
 
 class LinearMemoryTracer
