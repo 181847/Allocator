@@ -5,6 +5,7 @@
 #include "../../Library//MyTools/UnitTestModules.h"
 #include "../Allocators/PointerMath.h"
 #include "../Allocators/LinearAllocator.h"
+#include "../Allocators/StackAllocator.h"
 #include "../Allocators/MemoryTracer.h"
 #include "../../Library/MyTools/Cleaner.h"
 
@@ -15,9 +16,18 @@ DECLARE_TEST_UNITS;
 #define AddrEQ(u32, addr2) (reinterpret_cast<void*>(u32) == addr2)
 
 static const size_t gLinearSize = 256;
-static allocator::LinearAllocator gLinearAllocator(
-	gLinearSize,
-	malloc(gLinearSize));
+
+static const size_t gStackAllocatorSize = 256;
+
+// this marco to declare the linear allocator to use, 
+// and will clear the allocator when it's out of current
+// life range.
+#define DECLARE_LINER_ALLOCATOR	\
+	void * buffer = malloc(gLinearSize);\
+	allocator::LinearAllocator linearAllocator(gLinearSize, buffer);\
+	Cleaner clearLinearAlcTrashes([&]() {linearAllocator.clear(); free(buffer);})
+
+#define LinearTarget linearAllocator
 
 struct TestStruct
 {
@@ -44,7 +54,6 @@ void TestUnit::AddTestUnit()
 {
 	TEST_UNIT_START("first unit startup")
 		int error = 0;
-		error += gLinearSize != gLinearAllocator.getSize();
 		return error == 0;
 	TEST_UNIT_END;
 
@@ -91,96 +100,94 @@ void TestUnit::AddTestUnit()
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test use out of the gLinearAllocator with char")
-		allocator::LinearAllocator linearAllocator(gLinearSize, malloc(gLinearSize));
-		Cleaner clearLinearAlc([&](){linearAllocator.clear();});
-		void * pstart = linearAllocator.getStart();
+	TEST_UNIT_START("test use out of the gLinearTarget with char")
+		DECLARE_LINER_ALLOCATOR;
+		void * pstart = LinearTarget.getStart();
 		
 		for (int i = 0; i < gLinearSize; ++i)
 		{
-			allocator::AllocateNew<char>(linearAllocator);
+			allocator::AllocateNew<char>(LinearTarget);
 		}
 
 		int error = 0;
 
-		error += nullptr != linearAllocator.allocate(1, 1);
+		error += nullptr != LinearTarget.allocate(1, 1);
 		
-		return linearAllocator.getUsedMemory() == gLinearSize
+		return LinearTarget.getUsedMemory() == gLinearSize
 			&& error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("use out the LinearAllocator with array")
+	TEST_UNIT_START("use out the LinearTarget with array")
 		int error = 0;
-		allocator::LinearAllocator linearAllocator(gLinearSize, malloc(gLinearSize));
-		Cleaner clearLinearAlc([&]() {linearAllocator.clear(); });
-		void * pstart = linearAllocator.getStart();
+		DECLARE_LINER_ALLOCATOR;
+
+		void * pstart = LinearTarget.getStart();
 
 		const size_t headAdjustment = PointerMath::alignForwardAdjustment(pstart, alignof(u16))
 			+ PointerMath::ALIGN_ARR_HEADER<u16>::ret;
 		const size_t restMemory = gLinearSize - headAdjustment * sizeof(u16);
 
 		size_t maxLength = restMemory / sizeof(u16);
-		u16 * pArr = allocator::AllocateArray<u16>(linearAllocator, maxLength);
+		u16 * pArr = allocator::AllocateArray<u16>(LinearTarget, maxLength);
 
 		// this allocation should be success,after this allocation,
 		// any allocation will return nullptr.
 		error += pArr == nullptr;
 
-		error += nullptr != allocator::AllocateNew<u8>(linearAllocator);
+		error += nullptr != allocator::AllocateNew<u8>(LinearTarget);
 
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test clear LinearAllocator")
+	TEST_UNIT_START("test clear LinearTarget")
 		int error = 0;
-		allocator::LinearAllocator linearAllocator(gLinearSize, malloc(gLinearSize));
-		Cleaner clearLinearAlc([&]() {linearAllocator.clear(); });
-		void * pstart = linearAllocator.getStart();
+		DECLARE_LINER_ALLOCATOR;
+
+		void * pstart = LinearTarget.getStart();
 
 		// first allocate all the memory
 		for (int i = 0; i < gLinearSize; ++i)
 		{
-			allocator::AllocateNew<char>(linearAllocator);
+			allocator::AllocateNew<char>(LinearTarget);
 		}
-		// ensure that we cannot allocate any byte from the linearAllocator.
-		error += nullptr != linearAllocator.allocate(1, 1);
+		// ensure that we cannot allocate any byte from the LinearTarget.
+		error += nullptr != LinearTarget.allocate(1, 1);
 	
-		// clear the linearAllocator
-		linearAllocator.clear();
+		// clear the LinearTarget
+		LinearTarget.clear();
 		
 		// mallocate all the memory with a array of u16.
 		const size_t	headAdjustment = PointerMath::alignForwardAdjustment(pstart, alignof(u16))
 											+ PointerMath::ALIGN_ARR_HEADER<u16>::ret;
 		const size_t	restMemory = gLinearSize - headAdjustment * sizeof(u16);
 		size_t			maxLength = restMemory / sizeof(u16);
-		u16 *			pArr = allocator::AllocateArray<u16>(linearAllocator, maxLength);
+		u16 *			pArr = allocator::AllocateArray<u16>(LinearTarget, maxLength);
 
 		// dose the allocation success?
 		error += pArr == nullptr;
 
 		// and we will not get any other byte from the allocator.
-		error += nullptr != allocator::AllocateNew<u8>(linearAllocator);
+		error += nullptr != allocator::AllocateNew<u8>(LinearTarget);
 		
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test malloc from gLinearAllocator")
+	TEST_UNIT_START("test malloc from gLinearTarget")
 		DEBUG_MESSAGE("TestStruct size: %d\n", sizeof(TestStruct));
 		DEBUG_MESSAGE("TestStruct align: %d\n", alignof(TestStruct));
-		allocator::LinearAllocator linearAllocator(gLinearSize, malloc(gLinearSize));
-		Cleaner clearLinearAlc([&]() {linearAllocator.clear(); });
-		debug::debugAllocator::LinearMemoryTracer tracer(linearAllocator);
+		DECLARE_LINER_ALLOCATOR;
+		debug::debugAllocator::LinearMemoryTracer tracer(LinearTarget);
 
 		int error = 0;
 
-		auto * shouldBeOne = allocator::AllocateNew<int>(linearAllocator);
+		auto * shouldBeOne = allocator::AllocateNew<int>(LinearTarget);
 		tracer.New<int>();
 		*shouldBeOne = 1;
 
 		error += tracer.report();
 
 		const size_t arrLength = 5;
-		auto * pTestStructArr = allocator::AllocateArray<TestStruct>(linearAllocator, arrLength);
+		auto * pTestStructArr = allocator::AllocateArray<TestStruct>(LinearTarget, arrLength);
 		tracer.NewArray<TestStruct>(arrLength);
 		for (int i = 0; i < arrLength; ++i)
 		{
@@ -190,24 +197,24 @@ void TestUnit::AddTestUnit()
 		}
 
 		const size_t longArrLength = 5;
-		auto plongArr = allocator::AllocateArray<unsigned long>(linearAllocator, longArrLength);
+		auto plongArr = allocator::AllocateArray<unsigned long>(LinearTarget, longArrLength);
 		tracer.NewArray<unsigned long>(longArrLength);
 
 		error += 1 != *shouldBeOne;
 		error += tracer.report();
 
-		// WARNING this code will cause tracer dismatch the linearAllocator,
+		// WARNING this code will cause tracer dismatch the LinearTarget,
 		// because we want to test the tracer truly log the state
 		// of the allocator.
 		// so if corect, afther this operation,
 		// the trace should return a number > 0.
-		allocator::AllocateNew<int>(linearAllocator);
+		allocator::AllocateNew<int>(LinearTarget);
 
 		// if it return 0,
 		// there is some error in the tracer.
 		error += tracer.report() == 0;
 
-		//allocator::showAllocator(linearAllocator);
+		//allocator::showAllocator(LinearTarget);
 		return error == 0;
 	TEST_UNIT_END;
 }
