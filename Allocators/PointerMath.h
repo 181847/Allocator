@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include "../../Library/MyTools/UsefulDataType.h"
+#include "../../Library/MyTools/MetaTools.h"
 
 namespace PointerMath
 {
@@ -16,11 +17,41 @@ inline void printAddress(int address)
 	printf("%08x\n", address);
 }
 
+template<u32 addr, typename T>
+struct ALIGN_FORWARD_CLASS
+{
+	
+public:
+	enum {
+		ret = (addr + (alignof(T)- 1))
+			& ~(alignof(T)- 1)
+	};
+};
+
+// This struct is used to calculate the at least how many T
+// should be used to contain a headType.
+// if T is 'unsigned char'(1 Byte), headType is 'size_t'(4 Byte)
+// the ret should be 4,
+// if T is 'unsigned long'(8 Byte), headType is 'size_t'(4 Byte)
+// the ret should be only 1, even another 4 Byte is not used.
+template<typename T, typename headType = size_t>
+struct ALIGN_ARR_HEADER
+{
+public:
+	typedef typename
+		IF__<
+		sizeof(headType) % sizeof(T) == 0,
+		NUMBER_CONTAINER<0>,
+		NUMBER_CONTAINER<1>>::reType
+		reType;
+	enum { ret = sizeof(headType) / sizeof(T) + reType::ret };
+};// ALIGN_ARR_HEADER
+
 inline void* alignForward(void * addr, u8 align)
 {
-	//int a = reinterpret_cast<int>(addr);
-	//return (void*)((a + (align - 1)) & ~(align - 1));
-	return reinterpret_cast<void*>((reinterpret_cast<u32>(addr) + static_cast<u32>(align - 1)) 
+	return 
+		reinterpret_cast<void*>(
+			(reinterpret_cast<u32>(addr) + static_cast<u32>(align - 1)) 
 		& static_cast<u32>(~(align - 1)));
 }
 
