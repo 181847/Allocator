@@ -30,10 +30,10 @@
     <ClInclude Include="Allocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MetaTools.h">
+    <ClInclude Include="LinearAllocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LinearAllocator.h">
+    <ClInclude Include="MemoryTracer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -51,6 +51,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LinearAllocator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryTracer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
