@@ -12,8 +12,8 @@ public:
 	DELETE_COPY_CONSTRUCTOR(LinearAllocator)
 	virtual ~LinearAllocator();
 
-	void* allocate(size_t size, u8 align) override;
-	void deallocate(void * addr) override;
+	void *	allocate		(size_t size, u8 align) override;
+	void	deallocate		(void * addr)			override;
 
 	// to clear all memory.
 	void clear();
