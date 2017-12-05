@@ -50,7 +50,7 @@ T* AllocateNew(Allocator& allocator)
 template<typename T>
 void Deallocate(Allocator& allocator, T * p)
 {
-	p.~T();
+	p->~T();
 	allocator.deallocate(reinterpret_cast<T*>(p));
 }
 
@@ -93,7 +93,7 @@ inline void DeallocateArray(Allocator& allocator, T* parray)
 	// don't miss the substract operation,
 	// which will offset the array head pointer the the origianl
 	// pointer the allocator previously returned.
-	allocator.deallocate(parray - ALIGN_ARR_HEADER<T>::reType::ret);
+	allocator.deallocate(parray - PointerMath::ALIGN_ARR_HEADER<T>::reType::ret);
 }// DeallocateArray
 
 inline void showAllocator(Allocator & allocator)
