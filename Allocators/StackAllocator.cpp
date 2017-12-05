@@ -59,13 +59,13 @@ void StackAllocator::deallocate(void * addr)
 
 	size_t adjustment = pAlcHeader->adjustment;
 
-	_curr_pos = PointerMath::substract(addr, pAlcHeader->adjustment);
 #ifdef _DEBUG
 	_prev_pos = pAlcHeader->prevAddress;
 #endif
 
 	_used_memory -= adjustment + PointerMath::substract(_curr_pos, addr);
 	--_num_allocations;
+	_curr_pos = PointerMath::substract(addr, pAlcHeader->adjustment);
 }
 
 }// namespace allocator
