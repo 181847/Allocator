@@ -215,7 +215,6 @@ void TestUnit::AddTestUnit()
 
 int main()
 {
-
 	TestUnit::testMain();
     return 0;
 }
