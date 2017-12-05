@@ -33,7 +33,7 @@ public:
 
 	// report will report how many dis match curred 
 	// during the this report,
-	// it will check the usedMemory ans the allocations should be same.
+	// it will check the usedMemory ans the allocation num which should be the same.
 	// it should be 0(no error)/ 1/ 2(one or two error happended).
 	inline int report()
 	{
@@ -57,6 +57,7 @@ public:
 	size_t			numAllocations;
 };// memory tracer
 
+// This class is used to trace the linear allocator
 class LinearMemoryTracer
 	:public MemoryTracer
 {
@@ -71,22 +72,53 @@ public:
 	template<typename T>
 	inline void NewArray(size_t length)
 	{
-		tick();
 		usedMemory += (PointerMath::ALIGN_ARR_HEADER<T>::ret + length) * sizeof(T)
 			+ PointerMath::alignForwardAdjustment(
 				reinterpret_cast<void*>(basePointer + usedMemory), alignof(T));
+		tick();
 	}
 
 	template<typename T>
 	inline void New()
 	{
-		tick();
 		usedMemory += PointerMath::alignForwardAdjustment(
 			(void*)basePointer, alignof(T))
 			+ sizeof(T);
+		tick();
 	}
 	
 };// LinearMemory Tracer
 
+  // This class is used to trace the Stack allocator
+class StackMemoryTracer
+	:public MemoryTracer
+{
+
+public:
+	StackMemoryTracer(allocator::Allocator& alctr)
+		:MemoryTracer(alctr)
+	{}
+	DELETE_COPY_CONSTRUCTOR(StackMemoryTracer)
+
+
+		template<typename T>
+	inline void NewArray(size_t length)
+	{
+		usedMemory += (PointerMath::ALIGN_ARR_HEADER<T>::ret + length) * sizeof(T)
+			+ PointerMath::alignForwardAdjustmentWithHeader(
+				reinterpret_cast<void*>(basePointer + usedMemory), alignof(T),
+				sizeof(allocator::StackAllocator::AllocationHeader));
+		tick();
+	}
+
+	template<typename T>
+	inline void New()
+	{
+		usedMemory += PointerMath::alignForwardAdjustmentWithHeader(
+			(void*)basePointer, alignof(T), sizeof(allocator::StackAllocator::AllocationHeader))
+			+ sizeof(T);
+		tick();
+	}
+};// StackMemory Tracer
 }// allocator
 }// debug namespace
