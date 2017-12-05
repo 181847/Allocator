@@ -6,6 +6,7 @@ namespace allocator
 Allocator::Allocator(size_t size, void * start)
 	:_start(start), _size(size), _used_memory(0), _num_allocations(0)
 {
+	ASSERT(size > 0);
 }
 
 Allocator::~Allocator()
