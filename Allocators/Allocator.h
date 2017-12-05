@@ -65,6 +65,10 @@ T* AllocateArray(Allocator& allocator, size_t length)
 	// we will jump front head length;
 	T* p = headSize + reinterpret_cast<T*>(allocator.allocate(sizeof(T) * (length + headSize), alignof(T)));
 	// log length
+
+	// does the allocator return nullptr?
+	ASSERT(p - headSize != nullptr && "allocator returned nullptr");
+
 	*(reinterpret_cast<size_t*>(p) - 1) = length;
 
 	// call the constructor
