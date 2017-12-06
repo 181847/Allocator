@@ -36,7 +36,7 @@ void * FreeListAllocator::allocate(size_t size, u8 alignment)
 		totalSize = size + adjustment;
 
 		// find the first available FreeBlock.
-		if (totalSize < freeBlock->size)
+		if (totalSize > freeBlock->size)
 		{
 			prevBlock = freeBlock;
 			freeBlock = freeBlock->next;
@@ -58,7 +58,7 @@ void * FreeListAllocator::allocate(size_t size, u8 alignment)
 		"AllocationHeader should greater than FreeBlock, because next few code will compare to AllocationHeader, which should be the larger one.");
 
 	// check the remain memory is enough for another FreeBlock
-	if (freeBlock->size - totalSize < sizeof(AllocationHeader))
+	if ( ( freeBlock->size - totalSize ) < sizeof(AllocationHeader))
 	{// cannot create another FreeBlock
 		totalSize = freeBlock->size;
 		
@@ -76,6 +76,15 @@ void * FreeListAllocator::allocate(size_t size, u8 alignment)
 		PFreeBlock splitedOne = PointerMath::add(freeBlock, totalSize);
 		splitedOne->size = freeBlock->size - totalSize;
 		splitedOne->next = freeBlock->next;
+
+		if (prevBlock)
+		{
+			prevBlock->next = splitedOne;
+		}
+		else
+		{
+			_free_blocks = splitedOne;
+		}
 	}
 
 	// prepare the returned pointer
@@ -149,7 +158,7 @@ void FreeListAllocator::deallocate(void * addr)
 	}
 
 	// log memory state
-	_used_memory += size;
+	_used_memory -= size;
 	--_num_allocations;
 }
 
