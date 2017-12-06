@@ -91,13 +91,13 @@ inline u8 alignForwardAdjustmentWithHeader(void * addr, u8 aligment, u8 headSize
 // offset the address up
 inline void * add(void * addr, size_t offset)
 {
-	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) +offset);
+	return reinterpret_cast<void*>(reinterpret_cast<BYTE*>(addr) +offset);
 }
 
 template<typename T>
 inline T* add(T * addr, size_t offset)
 {
-	return reinterpret_cast<T*>(reinterpret_cast<void*>(addr) + offset));
+	return reinterpret_cast<T*>(reinterpret_cast<BYTE*>(addr) + offset);
 }
 
 // substruct the address by some offset
