@@ -117,7 +117,7 @@ void FreeListAllocator::deallocate(void * addr)
 	PFreeBlock prevBlock = nullptr;
 	PFreeBlock freeBlock = _free_blocks;
 
-	while ( ! freeBlock )
+	while ( freeBlock )
 	{
 		if (freeBlock >= blockStart)
 			break;
@@ -140,6 +140,7 @@ void FreeListAllocator::deallocate(void * addr)
 		else
 		{
 			blockStart->next = prevBlock->next;
+			prevBlock->next = blockStart;
 			blockStart->size = size;
 		}
 	}// end if(prevBlock)
@@ -155,6 +156,7 @@ void FreeListAllocator::deallocate(void * addr)
 	if (blockEnd == freeBlock)
 	{
 		blockStart->size += freeBlock->size;
+		blockStart->next = freeBlock->next;
 	}
 
 	// log memory state
