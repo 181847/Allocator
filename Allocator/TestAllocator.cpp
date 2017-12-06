@@ -6,8 +6,10 @@
 #include "../Allocators/PointerMath.h"
 #include "../Allocators/LinearAllocator.h"
 #include "../Allocators/StackAllocator.h"
+#include "../Allocators/FreeListAllocator.h"
 #include "../Allocators/MemoryTracer.h"
 #include "../../Library/MyTools/Cleaner.h"
+#include "../../Library/MyTools/RandomTools.h"
 
 #pragma comment(lib, "Allocators.lib")
 
@@ -15,9 +17,19 @@ DECLARE_TEST_UNITS;
 
 #define AddrEQ(u32, addr2) (reinterpret_cast<void*>(u32) == addr2)
 
+// this vector store the randoem number between 1`gMaxRandomSize,
+// this will be generate in the GetReady().
+static const size_t gRandomSeed = 1;
+static const size_t gMaxRandomSize = 100;
+static std::vector<size_t> gRandomSizes;
+
+static const size_t gLoopTime = 20000;
+
 static const size_t gLinearSize = 256;
 
 static const size_t gStackAllocatorSize = 512;
+
+static const size_t gFreeListAllocatorSize = 512;
 
 // this marco to declare the linear allocator to use, 
 // and will clear the allocator when it's out of current
@@ -38,6 +50,52 @@ static const size_t gStackAllocatorSize = 512;
 	allocator::StackAllocator stackAllocator(gStackAllocatorSize, buffer);\
 	Cleaner clearStackAlcTrashes([&]() { free(buffer);})
 // Stack Allocator help marco end
+
+#define DECLARE_FREELIST_ALLOCATOR\
+	void * buffer = malloc(gFreeListAllocatorSize);\
+	allocator::FreeListAllocator freeListAllocator(gFreeListAllocatorSize, buffer);\
+	Cleaner clearFreeListAlcTrashes([&](){free(buffer);})
+
+inline void doWithRandomSizes(size_t totalSize, std::function<void(size_t)> recieveRandomSize)
+{
+	size_t countTotalSize = 0;
+	for (auto & size : gRandomSizes)
+	{
+		countTotalSize += size;
+		if (countTotalSize > totalSize)
+			break;
+		else
+			recieveRandomSize(size);
+	}
+}
+
+inline void randomSequence_0_to_max(std::vector<size_t>* pContainer, size_t max, size_t offset = 0)
+{
+	auto & container = *pContainer;
+	container.resize(max);
+	for (size_t i = 0; i < max; ++i)
+	{
+		container[i] = i;
+	}
+	srand(gRandomSeed);
+	for (size_t i = max - 1; i >= 0; --i)
+	{
+		auto randIndex = rand() % max;
+
+		std::swap(container[i], container[randIndex]);
+
+		if (i == 0)
+			break;
+	}
+
+	if (offset)
+	{
+		for (size_t i = 0; i < max; ++i)
+		{
+			container[i] += offset;
+		}
+	}
+}
 
 struct TestStruct
 {
@@ -71,12 +129,16 @@ public:
 
 void TestUnit::GetReady()
 {
-
+	srand(gRandomSeed);
+	for (int i = 0; i < 20000; ++i)
+	{
+		gRandomSizes.push_back( ( rand() % gMaxRandomSize ) + 1);
+	}
 }
 
 void TestUnit::AfterTest()
 {
-
+	
 }
 
 void TestUnit::AddTestUnit()
@@ -284,8 +346,7 @@ void TestUnit::AddTestUnit()
 	TEST_UNIT_START("for stack allocator loop allocate and free (200000 times)")
 		int error = 0;
 		DECLARE_STACK_ALLOCATOR;
-		const size_t loopTimes = 200000;
-		for (int i = 0; i < loopTimes; ++i)
+		for (int i = 0; i < gLoopTime; ++i)
 		{
 
 			int * pShouldBe2 = allocator::AllocateNew<int>(stackAllocator);
@@ -314,6 +375,57 @@ void TestUnit::AddTestUnit()
 		error += stackAllocator.getUsedMemory() != 0;
 
 		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("normal use of FreeListAllocator")
+		int error = 0;
+		DECLARE_FREELIST_ALLOCATOR;
+		int * shouldBe3 = allocator::AllocateNew<int>(freeListAllocator);
+		*shouldBe3 = 3;
+
+		const size_t bufferSize = 50;
+		void* pAllocatedBuffer = freeListAllocator.allocate(bufferSize, 1);
+
+		error += pAllocatedBuffer == nullptr;
+		error += *shouldBe3 != 3;
+
+		freeListAllocator.deallocate(shouldBe3);
+		freeListAllocator.deallocate(pAllocatedBuffer);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("FreeListAllocator allocate and random deallocate memory")
+		int error = 0;
+		DECLARE_FREELIST_ALLOCATOR;
+		std::vector<void*> allocatedMemories;
+		
+		doWithRandomSizes(gFreeListAllocatorSize - 120, 
+			[&](size_t randomSize) {
+				allocatedMemories.push_back(freeListAllocator.allocate(randomSize, 1));
+			});
+
+		// generate shuffle indices to free.
+		size_t countMemories = allocatedMemories.size();
+		std::vector<size_t> randomIndices;
+		randomSequence_0_to_max(&randomIndices, countMemories);
+
+		// random free
+		for (size_t & index : randomIndices)
+		{
+			freeListAllocator.deallocate(allocatedMemories[index]);
+		}
+
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test the random sequence generator, this should always success")
+		std::vector<size_t> sequence;
+		randomTool::RandomSequence<size_t>(10, &sequence, 6);
+		for (auto & t : sequence)
+		{
+			DEBUG_MESSAGE("rand sequence: %d\n", t);
+		}
+		return true;
 	TEST_UNIT_END;
 }
 
