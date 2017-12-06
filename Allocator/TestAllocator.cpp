@@ -9,7 +9,7 @@
 #include "../Allocators/FreeListAllocator.h"
 #include "../Allocators/MemoryTracer.h"
 #include "../../Library/MyTools/Cleaner.h"
-#include "../../Library/MyTools/RandomTools.h"
+#include "../../Library/MyTools/RandomTool.h"
 
 #pragma comment(lib, "Allocators.lib")
 
@@ -23,18 +23,26 @@ static const size_t gRandomSeed = 1;
 static const size_t gMaxRandomSize = 100;
 static std::vector<size_t> gRandomSizes;
 
-static const size_t gLoopTime = 20000;
+// this is used to measure the last usage of the allocator,
+// in many tests, we will allocate the memory until it return nullptr,
+// but we should ensure that they have really used out the memory,
+// with the last buffer size(which make the allocator return mullptr)
+// plus current used memories size and the briefAdjustment, 
+// the result should greater that the allocator.size.
+static const size_t acceptRangeToFullUseOfMemory = 32;
+
+static const size_t gLoopTime = 20;
 
 static const size_t gLinearSize = 256;
 
 static const size_t gStackAllocatorSize = 512;
 
-static const size_t gFreeListAllocatorSize = 512;
+static const size_t gFreeListAllocatorSize = 2048;
 
 // this marco to declare the linear allocator to use, 
 // and will clear the allocator when it's out of current
 // life range.
-#define DECLARE_LINER_ALLOCATOR	\
+#define DECLARE_LINEAR_ALLOCATOR	\
 	void * buffer = malloc(gLinearSize);\
 	allocator::LinearAllocator linearAllocator(gLinearSize, buffer);\
 	Cleaner clearLinearAlcTrashes([&]() {linearAllocator.clear(); free(buffer);})
@@ -191,188 +199,193 @@ void TestUnit::AddTestUnit()
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test use out of the gLinearTarget with char")
-		DECLARE_LINER_ALLOCATOR;
-		void * pstart = LinearTarget.getStart();
-		
-		for (int i = 0; i < gLinearSize; ++i)
+	TEST_UNIT_START("test linearAllocatorm once")
+		int error = 0;
+		DECLARE_LINEAR_ALLOCATOR;
+
+		std::vector<void*> memories;
+		std::vector<size_t> randomSizes;
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+
+		memories.clear();
+		size_t lastRejectSize = 0;
+		for (auto & size : randomSizes)
 		{
-			allocator::AllocateNew<char>(LinearTarget);
+			ptemp = linearAllocator.allocate(size, 1);
+			if (ptemp)
+			{
+				memories.push_back(ptemp);
+			}
+			else
+			{
+				lastRejectSize = size;
+				break;
+			}
 		}
-
-		int error = 0;
-
-		error += nullptr != LinearTarget.allocate(1, 1);
+		// ensure that there is not much memory left.
+		error += 
+			(linearAllocator.getSize() - (lastRejectSize + linearAllocator.getUsedMemory()))
+			< acceptRangeToFullUseOfMemory;
 		
-		return LinearTarget.getUsedMemory() == gLinearSize
-			&& error == 0;
-	TEST_UNIT_END;
+		// deallocate use clear
+		linearAllocator.clear();
 
-	TEST_UNIT_START("use out the LinearTarget with array")
-		int error = 0;
-		DECLARE_LINER_ALLOCATOR;
-
-		void * pstart = LinearTarget.getStart();
-
-		const size_t headAdjustment = PointerMath::alignForwardAdjustment(pstart, alignof(u16))
-			+ PointerMath::ALIGN_ARR_HEADER<u16>::ret;
-		const size_t restMemory = gLinearSize - headAdjustment * sizeof(u16);
-
-		size_t maxLength = restMemory / sizeof(u16);
-		u16 * pArr = allocator::AllocateArray<u16>(LinearTarget, maxLength);
-
-		// this allocation should be success,after this allocation,
-		// any allocation will return nullptr.
-		error += pArr == nullptr;
-
-		error += nullptr != allocator::AllocateNew<u8>(LinearTarget);
-
+		error += 0 != linearAllocator.getUsedMemory();
+		error += 0 != linearAllocator.getNumAllocations();
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test clear LinearTarget")
+	TEST_UNIT_START("loop allocate and deallocate with linearAllocator")
 		int error = 0;
-		DECLARE_LINER_ALLOCATOR;
+		DECLARE_LINEAR_ALLOCATOR;
 
-		void * pstart = LinearTarget.getStart();
+		std::vector<void*> memories;
+		std::vector<size_t> usedMemoryLogger;
+		// this is used to log the first loop of the operation,
+		// afther this, any loop should be the same as the first one,
+		// if not, there is an error.
+		std::vector<size_t> randomSizes;
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+		size_t lastRejectSize = 0;
 
-		// first allocate all the memory
-		for (int i = 0; i < gLinearSize; ++i)
+		for (int i = 0; i < gLoopTime; ++i)
 		{
-			allocator::AllocateNew<char>(LinearTarget);
-		}
-		// ensure that we cannot allocate any byte from the LinearTarget.
-		error += nullptr != LinearTarget.allocate(1, 1);
-	
-		// clear the LinearTarget
-		LinearTarget.clear();
-		
-		// mallocate all the memory with a array of u16.
-		const size_t	headAdjustment = PointerMath::alignForwardAdjustment(pstart, alignof(u16))
-											+ PointerMath::ALIGN_ARR_HEADER<u16>::ret;
-		const size_t	restMemory = gLinearSize - headAdjustment * sizeof(u16);
-		size_t			maxLength = restMemory / sizeof(u16);
-		u16 *			pArr = allocator::AllocateArray<u16>(LinearTarget, maxLength);
+			memories.clear();
+			for (auto & size : randomSizes)
+			{
+				ptemp = linearAllocator.allocate(size, 1);
+				if (ptemp)
+				{
+					memories.push_back(ptemp);
 
-		// dose the allocation success?
-		error += pArr == nullptr;
+					// log only the first loop
+					if (i == 0)
+					{
+						usedMemoryLogger.push_back(linearAllocator.getUsedMemory());
+					}
+					else// any other loop should behave the same as the first one
+					{
+						lastRejectSize = size;
+						error += 
+							usedMemoryLogger[linearAllocator.getNumAllocations() - 1]
+							!= linearAllocator.getUsedMemory();
+					}
+				}
+				else
+				{
+					// the allocation size should also the same as the first one,
+					// here we don't distinguish first loop and after
+					lastRejectSize = size;
+					error += usedMemoryLogger.size() != (linearAllocator.getNumAllocations());
+					break;
+				}
+			}// for size in radomSizes
 
-		// and we will not get any other byte from the allocator.
-		error += nullptr != allocator::AllocateNew<u8>(LinearTarget);
-		
-		return error == 0;
-	TEST_UNIT_END;
+			 // ensure that there is not much memory left.
+			error +=
+				(linearAllocator.getSize() - (lastRejectSize + linearAllocator.getUsedMemory()))
+				< acceptRangeToFullUseOfMemory;
 
-	TEST_UNIT_START("test malloc from gLinearTarget")
-		DEBUG_MESSAGE("TestStruct size: %d\n", sizeof(TestStruct));
-		DEBUG_MESSAGE("TestStruct align: %d\n", alignof(TestStruct));
-		DECLARE_LINER_ALLOCATOR;
-		debug::debugAllocator::LinearMemoryTracer tracer(LinearTarget);
+			// deallocate
+			linearAllocator.clear();
+			error += linearAllocator.getUsedMemory() != 0;
+			error += linearAllocator.getNumAllocations() != 0;
+		}// for gLoopTime
 
-		int error = 0;
-
-		auto * shouldBeOne = allocator::AllocateNew<int>(LinearTarget);
-		tracer.New<int>();
-		*shouldBeOne = 1;
-
-		error += tracer.report();
-
-		const size_t arrLength = 5;
-		auto * pTestStructArr = allocator::AllocateArray<TestStruct>(LinearTarget, arrLength);
-		tracer.NewArray<TestStruct>(arrLength);
-		for (int i = 0; i < arrLength; ++i)
-		{
-			error += NOT_EQ(1, pTestStructArr[i]._a);
-			error += NOT_EQ(2, pTestStructArr[i]._b);
-			error += NOT_EQ(3, pTestStructArr[i]._c);
-		}
-
-		const size_t longArrLength = 5;
-		auto plongArr = allocator::AllocateArray<unsigned long>(LinearTarget, longArrLength);
-		tracer.NewArray<unsigned long>(longArrLength);
-
-		error += 1 != *shouldBeOne;
-		error += tracer.report();
-		
-		// WARNING this code will cause tracer dismatch the LinearTarget,
-		// because we want to test the tracer truly log the state
-		// of the allocator.
-		// so if corect, afther this operation,
-		// the trace should return a number > 0.
-		allocator::AllocateNew<int>(LinearTarget);
-
-		// if it return 0,
-		// there is some error in the tracer.
-		error += tracer.report() == 0;
-
-		//allocator::showAllocator(LinearTarget);
 		return error == 0;
 	TEST_UNIT_END;
 
 	TEST_UNIT_START("can StackAllocator usually work?")
-		DECLARE_STACK_ALLOCATOR;
 		int error = 0;
-		debug::debugAllocator::StackMemoryTracer tracer(stackAllocator);
+		DECLARE_STACK_ALLOCATOR;
 
-		int * pShouldBe2 = allocator::AllocateNew<int>(stackAllocator);
-		tracer.New<int>();
-		*pShouldBe2 = 2;
-		error += tracer.report();
+		std::vector<void*> memories;
+		std::vector<size_t> randomSizes;
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+		size_t lastRejectSize = 0;
 
-		const int arrLength = 5;
-		TestStruct * pTStruct = allocator::AllocateArray<TestStruct>(stackAllocator, arrLength);
-		tracer.NewArray<TestStruct>(arrLength);
-
-		for (int i = 0; i < arrLength; ++i)
+		memories.clear();
+		for (auto & size : randomSizes)
 		{
-			error += NOT_EQ(1, pTStruct[i]._a);
-			error += NOT_EQ(2, pTStruct[i]._b);
-			error += NOT_EQ(3, pTStruct[i]._c);
+			ptemp = stackAllocator.allocate(size, 1);
+			if (ptemp)
+			{
+				memories.push_back(ptemp);
+			}
+			else
+			{
+				lastRejectSize = size;
+				break;
+			}
 		}
-		error += 2 != *pShouldBe2;
+		// deallocate them in the reverse order
+		for (int i = memories.size() - 1; i >= 0; --i)
+		{
+			stackAllocator.deallocate(memories[i]);
+		}
 
-		error += tracer.report();
-
-		// to successfully end the use of stackAllocator, 
-		// we must free the memory,
-		// or the assert will be triggered in the deconstructor
-		// of Allocator, which dosen't allowed to free the allocator
-		// when still some object is on the memory.
-		allocator::DeallocateArray(stackAllocator, pTStruct);
-		allocator::Deallocate(stackAllocator, pShouldBe2);
+		error += 0 != stackAllocator.getUsedMemory();
+		error += 0 != stackAllocator.getNumAllocations();
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("for stack allocator loop allocate and free (200000 times)")
+	TEST_UNIT_START("for stack allocator loop allocate and free")
 		int error = 0;
 		DECLARE_STACK_ALLOCATOR;
+
+		std::vector<void*> memories;
+		std::vector<size_t> usedMemoryLogger;
+		// this is used to log the first loop of the operation,
+		// afther this, any loop should be the same as the first one,
+		// if not, there is an error.
+		std::vector<size_t> randomSizes;
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+		size_t lastRejectSize = 0;
+
 		for (int i = 0; i < gLoopTime; ++i)
 		{
-
-			int * pShouldBe2 = allocator::AllocateNew<int>(stackAllocator);
-			*pShouldBe2 = 2;
-
-			const int arrLength = 5;
-			TestStruct * pTStruct = allocator::AllocateArray<TestStruct>(stackAllocator, arrLength);
-			TestClass * pTClass = allocator::AllocateArray<TestClass>(stackAllocator, arrLength);
-
-			for (int i = 0; i < arrLength; ++i)
+			memories.clear();
+			for (auto & size : randomSizes)
 			{
-				error += pTStruct[i].report();
-				error += pTClass[i].report();
-			}
-			error += 2 != *pShouldBe2;
+				ptemp = stackAllocator.allocate(size, 1);
+				if (ptemp)
+				{
+					memories.push_back(ptemp);
 
-			// to successfully end the use of stackAllocator, 
-			// we must free the memory,
-			// or the assert will be triggered in the deconstructor
-			// of Allocator, which dosen't allowed to free the allocator
-			// when still some object is on the memory.
-			allocator::DeallocateArray(stackAllocator, pTClass);
-			allocator::DeallocateArray(stackAllocator, pTStruct);
-			allocator::Deallocate(stackAllocator, pShouldBe2);
+					// log only the first loop
+					if (i == 0)
+					{
+						usedMemoryLogger.push_back(stackAllocator.getUsedMemory());
+					}
+					else// any other loop should behave the same as the first one
+					{
+						lastRejectSize = size;
+						error += 
+							usedMemoryLogger[stackAllocator.getNumAllocations() - 1]
+							!= stackAllocator.getUsedMemory();
+					}
+				}
+				else
+				{
+					// the allocation size should also the same as the first one,
+					// here we don't distinguish first loop and after
+					error += usedMemoryLogger.size() != (stackAllocator.getNumAllocations());
+					break;
+				}
+			}
+
+			// deallocate them in the reverse order
+			for (int i = memories.size() - 1; i >= 0; --i)
+			{
+				stackAllocator.deallocate(memories[i]);
+			}
+			error += stackAllocator.getUsedMemory() != 0;
+			error += stackAllocator.getNumAllocations() != 0;
 		}
-		error += stackAllocator.getUsedMemory() != 0;
 
 		return error == 0;
 	TEST_UNIT_END;
@@ -394,39 +407,132 @@ void TestUnit::AddTestUnit()
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("FreeListAllocator allocate and random deallocate memory")
+	TEST_UNIT_START("FreeListAllocator randomly allocate and deallocate")
 		int error = 0;
 		DECLARE_FREELIST_ALLOCATOR;
-		std::vector<void*> allocatedMemories;
-		
-		doWithRandomSizes(gFreeListAllocatorSize - 120, 
-			[&](size_t randomSize) {
-				allocatedMemories.push_back(freeListAllocator.allocate(randomSize, 1));
-			});
 
-		// generate shuffle indices to free.
-		size_t countMemories = allocatedMemories.size();
+		std::vector<void*> memories;
+		std::vector<size_t> randomSizes;
 		std::vector<size_t> randomIndices;
-		randomSequence_0_to_max(&randomIndices, countMemories);
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+		size_t lastRejectSize = 0;
 
-		// random free
-		for (size_t & index : randomIndices)
+		// allocate
+		for (auto & size : randomSizes)
 		{
-			freeListAllocator.deallocate(allocatedMemories[index]);
+			ptemp = freeListAllocator.allocate(size, 1);
+			if (ptemp)
+			{
+				//DEBUG_MESSAGE("allocated with size: %d\n", size);
+				//DEBUG_MESSAGE("allocatore state: total:%d\tused:%d\n", freeListAllocator.getSize(), freeListAllocator.getUsedMemory());
+				memories.push_back(ptemp);
+			}
+			else
+			{
+				lastRejectSize = size;
+				break;
+			}
+		}
+
+		// deallocate
+		RandomTool::RandomSequence<size_t>(memories.size(), &randomIndices);
+
+		for (auto & index : randomIndices)
+		{
+			freeListAllocator.deallocate(memories[index]);
+			memories[index] = nullptr;
+		}
+
+		error += freeListAllocator.getUsedMemory() != 0;
+		error += freeListAllocator.getNumAllocations() != 0;
+
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("loop the allocation and free with FreeListAllocator")
+		int error = 0;
+		DECLARE_FREELIST_ALLOCATOR;
+
+		std::vector<void*> memories;
+		std::vector<size_t> usedMemoryLogger;
+		// this is used to log the first loop of the operation,
+		// afther this, any loop should be the same as the first one,
+		// if not, there is an error.
+		std::vector<size_t> randomSizes;
+		std::vector<size_t> randomIndices;
+		RandomTool::RandomNumbers<size_t>(2000, &randomSizes, 100, 1);
+		void * ptemp = nullptr;
+		size_t lastRejectSize = 0;
+
+		for (int i = 0; i < gLoopTime; ++i)
+		{
+			//DEBUG_MESSAGE("loop freeListAllocator round: %d\n", i);
+			memories.clear();
+			for (auto & size : randomSizes)
+			{
+				ptemp = freeListAllocator.allocate(size, 1);
+				if (ptemp)
+				{
+					//DEBUG_MESSAGE("allocated with size: %d\n", size);
+					//DEBUG_MESSAGE("allocatore state: total:%d\tused:%d\n", freeListAllocator.getSize(), freeListAllocator.getUsedMemory());
+					memories.push_back(ptemp);
+
+					// log only the first loop
+					if (i == 0)
+					{
+						usedMemoryLogger.push_back(freeListAllocator.getUsedMemory());
+					}
+					else// any other loop should behave the same as the first one
+					{
+						lastRejectSize = size;
+						error += 
+							usedMemoryLogger[freeListAllocator.getNumAllocations() - 1] 
+							!= freeListAllocator.getUsedMemory();
+					}
+				}
+				else
+				{
+					// the allocation size should also the same as the first one,
+					// here we don't distinguish first loop and after
+					error += usedMemoryLogger.size() != (freeListAllocator.getNumAllocations());
+					break;
+				}
+			}
+			// deallocate
+			RandomTool::RandomSequence<size_t>(memories.size(), &randomIndices);
+
+			for (auto & index : randomIndices)
+			{
+				freeListAllocator.deallocate(memories[index]);
+				memories[index] = nullptr;
+			}
+			error += freeListAllocator.getUsedMemory() != 0;
+			error += freeListAllocator.getNumAllocations() != 0;
 		}
 
 		return error == 0;
 	TEST_UNIT_END;
 
-	TEST_UNIT_START("test the random sequence generator, this should always success")
+	/*TEST_UNIT_START("test the random sequence generator, this should always failed")
 		std::vector<size_t> sequence;
-		randomTool::RandomSequence<size_t>(10, &sequence, 6);
+		RandomTool::RandomSequence<size_t>(10, &sequence, 6);
 		for (auto & t : sequence)
 		{
 			DEBUG_MESSAGE("rand sequence: %d\n", t);
 		}
-		return true;
+		return false;
 	TEST_UNIT_END;
+
+	TEST_UNIT_START("test random number generator, this should always failed")
+		std::vector<size_t> sequence;
+		RandomTool::RandomNumbers<size_t>(30, &sequence, 15);
+		for (auto & t : sequence)
+		{
+			DEBUG_MESSAGE("rand number: %d\n", t);
+		}
+		return false;
+	TEST_UNIT_END;*/
 }
 
 
