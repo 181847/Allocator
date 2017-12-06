@@ -94,6 +94,12 @@ inline void * add(void * addr, size_t offset)
 	return reinterpret_cast<void*>(reinterpret_cast<DWORD>(addr) +offset);
 }
 
+template<typename T>
+inline T* add(T * addr, size_t offset)
+{
+	return reinterpret_cast<T*>(reinterpret_cast<void*>(addr) + offset));
+}
+
 // substruct the address by some offset
 inline void * substract(void * addr, size_t offset)
 {
