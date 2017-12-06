@@ -64,47 +64,6 @@ static const size_t gFreeListAllocatorSize = 2048;
 	allocator::FreeListAllocator freeListAllocator(gFreeListAllocatorSize, buffer);\
 	Cleaner clearFreeListAlcTrashes([&](){free(buffer);})
 
-inline void doWithRandomSizes(size_t totalSize, std::function<void(size_t)> recieveRandomSize)
-{
-	size_t countTotalSize = 0;
-	for (auto & size : gRandomSizes)
-	{
-		countTotalSize += size;
-		if (countTotalSize > totalSize)
-			break;
-		else
-			recieveRandomSize(size);
-	}
-}
-
-inline void randomSequence_0_to_max(std::vector<size_t>* pContainer, size_t max, size_t offset = 0)
-{
-	auto & container = *pContainer;
-	container.resize(max);
-	for (size_t i = 0; i < max; ++i)
-	{
-		container[i] = i;
-	}
-	srand(gRandomSeed);
-	for (size_t i = max - 1; i >= 0; --i)
-	{
-		auto randIndex = rand() % max;
-
-		std::swap(container[i], container[randIndex]);
-
-		if (i == 0)
-			break;
-	}
-
-	if (offset)
-	{
-		for (size_t i = 0; i < max; ++i)
-		{
-			container[i] += offset;
-		}
-	}
-}
-
 struct TestStruct
 {
 	int _a;
@@ -137,11 +96,7 @@ public:
 
 void TestUnit::GetReady()
 {
-	srand(gRandomSeed);
-	for (int i = 0; i < 20000; ++i)
-	{
-		gRandomSizes.push_back( ( rand() % gMaxRandomSize ) + 1);
-	}
+
 }
 
 void TestUnit::AfterTest()
