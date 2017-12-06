@@ -469,6 +469,81 @@ void TestUnit::AddTestUnit()
 		return error == 0;
 	TEST_UNIT_END;
 
+	TEST_UNIT_START("test allocator.AllocateNew with linearAllocator")
+		DECLARE_LINEAR_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc = allocator::AllocateNew<TestClass>(linearAllocator);
+
+		error += ptc->report();
+
+		linearAllocator.clear();
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test allocator.AllocateArray with linearAllocator")
+		DECLARE_LINEAR_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc_arr = allocator::AllocateArray<TestClass>(linearAllocator, arrLength);
+		for (int i = 0; i < arrLength; ++i)
+		{
+			error += ptc_arr[i].report();
+		}
+		linearAllocator.clear();
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test allocator.AllocateNew with stackAllocator")
+		DECLARE_STACK_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc = allocator::AllocateNew<TestClass>(stackAllocator);
+
+		error += ptc->report();
+
+		allocator::Deallocate(stackAllocator, ptc);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test allocator.AllocateArray with stackAllocator")
+		DECLARE_STACK_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc_arr = allocator::AllocateArray<TestClass>(stackAllocator, arrLength);
+		for (int i = 0; i < arrLength; ++i)
+		{
+			error += ptc_arr[i].report();
+		}
+		allocator::DeallocateArray(stackAllocator, ptc_arr);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test allocator.AllocateNew with freeListAllocator")
+		DECLARE_FREELIST_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc = allocator::AllocateNew<TestClass>(freeListAllocator);
+
+		error += ptc->report();
+
+		allocator::Deallocate(freeListAllocator, ptc);
+		return error == 0;
+	TEST_UNIT_END;
+
+	TEST_UNIT_START("test allocator.AllocateArray with freeListAllocator")
+		DECLARE_FREELIST_ALLOCATOR;
+		int error = 0;
+		const int arrLength = 5;
+		TestClass * ptc_arr = allocator::AllocateArray<TestClass>(freeListAllocator, arrLength);
+		for (int i = 0; i < arrLength; ++i)
+		{
+			error += ptc_arr[i].report();
+		}
+		allocator::DeallocateArray(freeListAllocator, ptc_arr);
+		return error == 0;
+	TEST_UNIT_END;
+
 	/*TEST_UNIT_START("test the random sequence generator, this should always failed")
 		std::vector<size_t> sequence;
 		RandomTool::RandomSequence<size_t>(10, &sequence, 6);
