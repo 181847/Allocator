@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Allocator", "Allocator\Allocator.vcxproj", "{1EA76AC9-D91C-48B3-B925-3E697A55E55A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6011DD5A-AAAD-451E-927A-65C4D5DB252D} = {6011DD5A-AAAD-451E-927A-65C4D5DB252D}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Allocators", "Allocators\Allocators.vcxproj", "{6011DD5A-AAAD-451E-927A-65C4D5DB252D}"
 EndProject
