@@ -4,7 +4,7 @@
 namespace allocator
 {
 
-class PoolAllocator
+class ALLOCATOR_API PoolAllocator
 	:public Allocator
 {
 public:
