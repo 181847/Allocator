@@ -26,7 +26,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -71,6 +71,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)/deps/include/;$(SolutionDir)/../Library/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)/deps/lib/;$(SolutionDir)/Debug/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -87,7 +89,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;ALLOCATORS_EXPORTS;ASSERTIONS_ENABLED;USE_SYS_ASSERT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;ASSERTIONS_ENABLED;USE_SYS_ASSERT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -149,36 +151,22 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Allocator.h" />
-    <ClInclude Include="FreeListAllocator.h" />
-    <ClInclude Include="LinearAllocator.h" />
-    <ClInclude Include="MemoryTracer.h" />
-    <ClInclude Include="PointerMath.h" />
-    <ClInclude Include="PoolAllocator.h" />
-    <ClInclude Include="StackAllocator.h" />
+    <ClInclude Include="..\..\Library\Allocator\Allocator.h" />
+    <ClInclude Include="..\..\Library\Allocator\FreeListAllocator.h" />
+    <ClInclude Include="..\..\Library\Allocator\LinearAllocator.h" />
+    <ClInclude Include="..\..\Library\Allocator\MemoryTracer.h" />
+    <ClInclude Include="..\..\Library\Allocator\PointerMath.h" />
+    <ClInclude Include="..\..\Library\Allocator\PoolAllocator.h" />
+    <ClInclude Include="..\..\Library\Allocator\StackAllocator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Allocator.cpp" />
-    <ClCompile Include="dllmain.cpp">
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </PrecompiledHeader>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="FreeListAllocator.cpp" />
-    <ClCompile Include="LinearAllocator.cpp" />
-    <ClCompile Include="PoolAllocator.cpp" />
-    <ClCompile Include="StackAllocator.cpp" />
+    <ClCompile Include="..\..\Library\Allocator\Allocator.cpp" />
+    <ClCompile Include="..\..\Library\Allocator\FreeListAllocator.cpp" />
+    <ClCompile Include="..\..\Library\Allocator\LinearAllocator.cpp" />
+    <ClCompile Include="..\..\Library\Allocator\PoolAllocator.cpp" />
+    <ClCompile Include="..\..\Library\Allocator\StackAllocator.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

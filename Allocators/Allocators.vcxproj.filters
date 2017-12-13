@@ -24,25 +24,25 @@
     <ClInclude Include="targetver.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PointerMath.h">
+    <ClInclude Include="..\..\Library\Allocator\Allocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Allocator.h">
+    <ClInclude Include="..\..\Library\Allocator\FreeListAllocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LinearAllocator.h">
+    <ClInclude Include="..\..\Library\Allocator\LinearAllocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryTracer.h">
+    <ClInclude Include="..\..\Library\Allocator\MemoryTracer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="StackAllocator.h">
+    <ClInclude Include="..\..\Library\Allocator\PointerMath.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FreeListAllocator.h">
+    <ClInclude Include="..\..\Library\Allocator\PoolAllocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PoolAllocator.h">
+    <ClInclude Include="..\..\Library\Allocator\StackAllocator.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,22 +50,19 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="dllmain.cpp">
+    <ClCompile Include="..\..\Library\Allocator\Allocator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Allocator.cpp">
+    <ClCompile Include="..\..\Library\Allocator\FreeListAllocator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LinearAllocator.cpp">
+    <ClCompile Include="..\..\Library\Allocator\LinearAllocator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="StackAllocator.cpp">
+    <ClCompile Include="..\..\Library\Allocator\PoolAllocator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FreeListAllocator.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="PoolAllocator.cpp">
+    <ClCompile Include="..\..\Library\Allocator\StackAllocator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
