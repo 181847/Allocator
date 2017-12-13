@@ -2,15 +2,15 @@
 //
 
 #include "stdafx.h"
-#include "../../Library//MyTools/UnitTestModules.h"
-#include "../Allocators/PointerMath.h"
-#include "../Allocators/LinearAllocator.h"
-#include "../Allocators/StackAllocator.h"
-#include "../Allocators/FreeListAllocator.h"
-#include "../Allocators/PoolAllocator.h"
-#include "../Allocators/MemoryTracer.h"
-#include "../../Library/MyTools/Cleaner.h"
-#include "../../Library/MyTools/RandomTool.h"
+#include <MyTools/UnitTestModules.h>
+#include <MyTools/Cleaner.h>
+#include <MyTools/RandomTool.h>
+#include <Allocator/PointerMath.h>
+#include <Allocator/LinearAllocator.h>
+#include <Allocator/StackAllocator.h>
+#include <Allocator/FreeListAllocator.h>
+#include <Allocator/PoolAllocator.h>
+#include <Allocator/MemoryTracer.h>
 
 #pragma comment(lib, "Allocators.lib")
 
